@@ -145,11 +145,35 @@ $('exportBtn').onclick=async()=>{
   recorder.onerror=e=>{exporting=false;setStatus('Ошибка экспорта. Попробуй более короткий фрагмент. '+(e.error?.message||''))};
   recorder.onstop=()=>{
    exporting=false;video.pause();stopAtEnd=false;
-   const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
-   a.href=url;a.download='novacut-clip.webm';document.body.appendChild(a);a.click();a.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),60000);
-   stream.getTracks().forEach(t=>t.stop());setStatus('Готово! Файл novacut-clip.webm должен сохраниться в загрузках.');
-  };
+    const blob = new Blob(chunks, { type: mime });
+
+if (!blob.size) {
+  setStatus('Ошибка: видео не записалось. Попробуй выбрать другой фрагмент.');
+  return;
+}
+
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+
+a.href = url;
+a.download = 'novacut-clip.webm';
+a.style.display = 'none';
+
+document.body.appendChild(a);
+a.click();
+
+setTimeout(() => {
+  URL.revokeObjectURL(url);
+  a.remove();
+}, 60000);
+
+setTimeout(() => {
+    URL.revokeObjectURL(url);
+}, 60000);
+
+stream.getTracks().forEach(t => t.stop());
+
+setStatus('Готово! Файл novacut-clip.webm должен сохраниться в загрузках.');
   exporting=true;setStatus('Экспорт идёт… не переключай вкладку.');video.currentTime=s.start;
   await new Promise(resolve=>{if(video.readyState>=2)resolve();else video.addEventListener('canplay',resolve,{once:true})});
   recorder.start(250);
