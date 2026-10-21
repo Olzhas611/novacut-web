@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101014">
+<meta name="description" content="NovaCut — простой видеоредактор в браузере">
+<link rel="manifest" href="manifest.webmanifest">
+<title>NovaCut Web</title>
+<style>
+:root{--bg:#101014;--panel:#1a1a22;--panel2:#23232d;--text:#f5f5f7;--muted:#a4a4b2;--accent:#8b5cf6;--line:#343440}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{height:60px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:sticky;top:0;background:#101014ed;z-index:3}
+.brand{font-weight:850;letter-spacing:.2px;font-size:20px}.brand span{color:var(--accent)}.badge{font-size:11px;color:#d4c7ff;border:1px solid #55417e;padding:4px 8px;border-radius:99px}
+main{max-width:1000px;margin:auto;padding:14px;display:grid;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.section-title{font-size:14px;color:var(--muted);font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:.7px}
+.drop{border:1.5px dashed #5a4b79;border-radius:14px;padding:22px 12px;text-align:center;background:#17141f}
+button,.file-label{border:0;border-radius:11px;background:var(--accent);color:white;font-weight:700;padding:11px 14px;font-size:14px;cursor:pointer;display:inline-flex;justify-content:center;align-items:center;gap:7px}
+button.secondary{background:var(--panel2);border:1px solid var(--line);color:var(--text)}button:disabled{opacity:.4;cursor:not-allowed}
+input[type=file]{display:none}.hint{color:var(--muted);font-size:12px;line-height:1.5;margin-top:9px}
+.preview{position:relative;background:#050507;border-radius:12px;overflow:hidden;min-height:180px;display:flex;align-items:center;justify-content:center}
+video{display:block;width:100%;max-height:55vh;background:#050507}
+.empty{padding:30px 14px;text-align:center;color:var(--muted)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.meta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin:10px 0}
+label{display:block;font-size:13px;color:#dedee8;margin:12px 0 6px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=text]{width:100%;border-radius:10px;background:#111117;border:1px solid var(--line);color:white;padding:11px;font-size:14px}
+.range-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.timeline{height:9px;border-radius:99px;background:#393444;position:relative;margin:13px 0 5px;overflow:hidden}
+#selectedBand{height:100%;position:absolute;left:0;width:100%;background:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.status{padding:10px 12px;border-radius:10px;background:#14141b;color:#c9c9d7;font-size:12px;line-height:1.5;margin-top:10px;white-space:pre-wrap}
+footer{text-align:center;color:#777787;font-size:11px;padding:10px 16px 24px}
+@media(min-width:760px){main{grid-template-columns:1.15fr .85fr;align-items:start}.editor-card{grid-column:1}.export-card{grid-column:2}.preview video{max-height:420px}}
+</style>
+</head>
+<body>
+<header><div class="brand">Nova<span>Cut</span></div><div class="badge">WEB EDITOR · BETA</div></header>
+<main>
+<section class="card">
+  <h2 class="section-title">1 · Медиа</h2>
+  <div class="drop">
+    <div style="font-size:30px;margin-bottom:6px">＋</div>
+    <div style="font-weight:750;margin-bottom:10px">Добавь видео с телефона</div>
+    <label class="file-label" for="videoFile">📁 Выбрать видео</label>
+    <input id="videoFile" type="file" accept="video/*">
+    <div class="hint">Видео открывается локально в браузере. Файл не загружается на сервер.</div>
+  </div>
+  <div class="meta"><span id="fileName">Файл не выбран</span><span id="durationText">00:00</span></div>
+  <div class="preview">
+    <div id="empty" class="empty">Твой предпросмотр появится здесь</div>
+    <video id="video" playsinline controls hidden></video>
+  </div>
+  <div class="controls">
+    <button id="playBtn" disabled>▶ Воспроизвести фрагмент</button>
+    <button id="stopBtn" class="secondary" disabled>■ Стоп</button>
+  </div>
+</section>
+<section class="card editor-card">
+  <h2 class="section-title">2 · Монтаж</h2>
+  <div class="hint">Выбери начало и конец фрагмента. Ползунки задают участок для предпросмотра и экспорта.</div>
+  <div class="range-row">
+    <div><label for="startRange">Начало: <b id="startLabel">0.0 с</b></label><input id="startRange" type="range" min="0" max="0" step="0.1" value="0" disabled></div>
+    <div><label for="endRange">Конец: <b id="endLabel">0.0 с</b></label><input id="endRange" type="range" min="0" max="0" step="0.1" value="0" disabled></div>
+  </div>
+  <div class="timeline"><div id="selectedBand"></div></div>
+  <div class="meta"><span>Выбрано: <b id="clipLength">0.0 с</b></span><span id="currentTime">Позиция: 0.0 с</span></div>
+  <label for="overlayText">Текст поверх видео (для предпросмотра)</label>
+  <input id="overlayText" type="text" maxlength="80" placeholder="Например: Мой ролик">
+  <div class="hint">Текст показывается в окне предпросмотра. В текущей бета-версии он не вшивается в экспортированный файл.</div>
+  <div class="controls"><button class="secondary" id="goStart" disabled>↶ К началу фрагмента</button><button class="secondary" id="goEnd" disabled>↷ К концу фрагмента</button></div>
+</section>
+<section class="card export-card">
+  <h2 class="section-title">3 · Экспорт</h2>
+  <p style="font-size:14px;line-height:1.55;color:#d4d4df;margin-top:0">Экспорт выбранного участка в WebM выполняется записью воспроизведения в браузере. Поддержка зависит от браузера и устройства.</p>
+  <button id="exportBtn" disabled>⬇ Экспортировать фрагмент</button>
+  <div id="status" class="status" role="status">Сначала выбери видео.</div>
+  <div class="hint">Совет: держи вкладку открытой во время экспорта. Для совместимости с монтажными приложениями позже добавим MP4-экспорт и дополнительные инструменты.</div>
+</section>
+</main>
+<footer>NovaCut — независимый прототип. Не связан с CapCut.</footer>
+<script>
+const $=id=>document.getElementById(id);
+const video=$('video'), fileInput=$('videoFile');
+let objectUrl=null, exporting=false, stopAtEnd=false;
+function fmt(s){if(!Number.isFinite(s))s=0;const m=Math.floor(s/60),sec=Math.floor(s%60);return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')}
+function setStatus(t){$('status').textContent=t}
+function selected(){return {start:Number($('startRange').value),end:Number($('endRange').value)}}
+function updateSelection(){
+ const s=selected(), d=Number(video.duration)||0;
+ $('startLabel').textContent=s.start.toFixed(1)+' с';$('endLabel').textContent=s.end.toFixed(1)+' с';
+ $('clipLength').textContent=Math.max(0,s.end-s.start).toFixed(1)+' с';
+ $('selectedBand').style.left=(d?s.start/d*100:0)+'%';
+ $('selectedBand').style.width=(d?Math.max(0,(s.end-s.start)/d*100):100)+'%';
+}
+function enableControls(on){['playBtn','stopBtn','startRange','endRange','goStart','goEnd','exportBtn'].forEach(id=>$(id).disabled=!on)}
+fileInput.addEventListener('change',()=>{
+ const f=fileInput.files&&fileInput.files[0];if(!f)return;
+ if(objectUrl)URL.revokeObjectURL(objectUrl);
+ objectUrl=URL.createObjectURL(f);video.src=objectUrl;video.hidden=false;$('empty').hidden=true;
+ $('fileName').textContent=f.name;$('status').textContent='Загружаю видео…';
+ video.onloadedmetadata=()=>{
+  const d=video.duration;if(!Number.isFinite(d)||d<=0){setStatus('Не удалось определить длительность этого видео. Попробуй другой файл.');return}
+  $('durationText').textContent=fmt(d);
+  ['startRange','endRange'].forEach(id=>{ $(id).max=d;$(id).step=Math.max(.1,d/1000) });
+  $('startRange').value=0;$('endRange').value=d;enableControls(true);updateSelection();setStatus('Видео готово. Выбери начало и конец фрагмента.');
+ };
+});
+$('startRange').addEventListener('input',()=>{if(Number($('startRange').value)>=Number($('endRange').value))$('endRange').value=$('startRange').value;updateSelection()});
+$('endRange').addEventListener('input',()=>{if(Number($('endRange').value)<=Number($('startRange').value))$('startRange').value=$('endRange').value;updateSelection()});
+video.addEventListener('timeupdate',()=>{
+ $('currentTime').textContent='Позиция: '+video.currentTime.toFixed(1)+' с';
+ if(stopAtEnd&&video.currentTime>=selected().end){video.pause();video.currentTime=selected().end;stopAtEnd=false}
+});
+$('playBtn').onclick=async()=>{const s=selected();if(s.end<=s.start){setStatus('Выбери фрагмент длиннее нуля секунд.');return}video.currentTime=s.start;stopAtEnd=true;try{await video.play()}catch(e){setStatus('Не удалось запустить воспроизведение: '+e.message)}};
+$('stopBtn').onclick=()=>{video.pause();stopAtEnd=false};
+$('goStart').onclick=()=>{video.currentTime=selected().start};
+$('goEnd').onclick=()=>{video.currentTime=selected().end};
+$('overlayText').addEventListener('input',()=>{
+ let t=$('overlayText').value, old=document.getElementById('previewOverlay');
+ if(!old){old=document.createElement('div');old.id='previewOverlay';old.style.cssText='position:absolute;bottom:18px;left:10px;right:10px;text-align:center;font-size:clamp(18px,5vw,34px);font-weight:900;color:white;text-shadow:0 2px 5px #000,0 0 12px #000;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere';$('empty').parentElement.appendChild(old)}
+ old.textContent=t;old.hidden=!t;
+});
+function supportedMime(){
+ const types=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+ return types.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
+}
+$('exportBtn').onclick=async()=>{
+ if(exporting)return;
+ const s=selected(),mime=supportedMime();
+ if(!mime){setStatus('Этот браузер не поддерживает экспорт WebM через MediaRecorder. Попробуй Chrome на Android.');return}
+ if(!video.captureStream&&!video.mozCaptureStream){setStatus('Этот браузер не поддерживает захват видео для экспорта.');return}
+ if(s.end<=s.start){setStatus('Выбери фрагмент длиннее нуля секунд.');return}
+ const capture=video.captureStream?video.captureStream():video.mozCaptureStream();
+ let canvas,ctx,canvasStream;
+ try{
+  canvas=document.createElement('canvas');canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720;ctx=canvas.getContext('2d');
+  canvasStream=canvas.captureStream(30);
+  const tracks=[...canvasStream.getVideoTracks(),...capture.getAudioTracks()];
+  const stream=new MediaStream(tracks);
+  const recorder=new MediaRecorder(stream,{mimeType:mime});const chunks=[];
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  recorder.onerror=e=>{exporting=false;setStatus('Ошибка экспорта. Попробуй более короткий фрагмент. '+(e.error?.message||''))};
+  recorder.onstop=()=>{
+   exporting=false;video.pause();stopAtEnd=false;
+   const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');
+   a.href=url;a.download='novacut-clip.webm';document.body.appendChild(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),60000);
+   stream.getTracks().forEach(t=>t.stop());setStatus('Готово! Файл novacut-clip.webm должен сохраниться в загрузках.');
+  };
+  exporting=true;setStatus('Экспорт идёт… не переключай вкладку.');video.currentTime=s.start;
+  await new Promise(resolve=>{if(video.readyState>=2)resolve();else video.addEventListener('canplay',resolve,{once:true})});
+  recorder.start(250);
+  const draw=()=>{if(!exporting)return;try{ctx.drawImage(video,0,0,canvas.width,canvas.height)}catch(e){}if(exporting)requestAnimationFrame(draw)};draw();
+  await video.play();
+  const watch=()=>{if(!exporting)return;if(video.currentTime>=s.end||video.ended){video.pause();try{recorder.stop()}catch(e){}return}requestAnimationFrame(watch)};watch();
+ }catch(e){exporting=false;setStatus('Экспорт не запустился: '+e.message+'. Попробуй Chrome и короткий фрагмент.')}
+};
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
